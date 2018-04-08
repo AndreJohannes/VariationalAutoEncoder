@@ -71,7 +71,7 @@ class VariationalAutoEncoder(nn.Module):
         self.loss_queue = Queue()
         self.stop_signal = Signal()
         self.losses = []
-        self.train_loader, self.test_loader = VariationalAutoEncoder._get_train_loader()
+        #self.train_loader, self.test_loader = VariationalAutoEncoder._get_train_loader()
         # self.img_loss_func = nn.MSELoss()
 
     def forward(self, x):
