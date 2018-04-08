@@ -62,7 +62,7 @@ class VariationalAutoEncoder(nn.Module):
             else ConvDecoder.Decoder(n_latent_units, drop_ratio)
         self.proc = None
 
-        self.cuda = cuda
+        self.has_cuda = cuda
         if cuda:
             self.cuda()
 
@@ -94,7 +94,7 @@ class VariationalAutoEncoder(nn.Module):
             raise Exception("Process already started.")
         self.share_memory()
         self.losses = []
-        train = VariationalAutoEncoder._get_training_test_method(self.cuda)
+        train = VariationalAutoEncoder._get_training_test_method(self.has_cuda)
         self.proc = mp.Process(target=train, args=(self, self.train_loader,
                                                    self.test_loader,
                                                    self.counter_epoch,
@@ -110,7 +110,7 @@ class VariationalAutoEncoder(nn.Module):
             raise Exception("Process is still active.")
         #self.share_memory()
         self.stop_signal.set_signal(False)
-        train = VariationalAutoEncoder._get_training_test_method(self.cuda)
+        train = VariationalAutoEncoder._get_training_test_method(self.has_cuda)
         self.proc = mp.Process(target=train, args=(self, self.train_loader,
                                                    self.test_loader,
                                                    self.counter_epoch,
