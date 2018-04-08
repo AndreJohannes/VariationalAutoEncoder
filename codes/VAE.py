@@ -49,7 +49,7 @@ class VariationalAutoEncoder(nn.Module):
 
     '''
 
-    def __init__(self, n_latent_units, drop_ratio, convolutional=False):
+    def __init__(self, n_latent_units, drop_ratio, convolutional=False, cuda = False):
         '''
 
         :param n_latent_units:
@@ -61,6 +61,10 @@ class VariationalAutoEncoder(nn.Module):
         self.decoder = Decoder.Decoder(n_latent_units, drop_ratio) if not convolutional \
             else ConvDecoder.Decoder(n_latent_units, drop_ratio)
         self.proc = None
+
+        self.cuda = cuda
+        if cuda:
+            self.cuda()
 
         self.counter_epoch = Counter()
         self.counter_interation = Counter()
@@ -90,7 +94,7 @@ class VariationalAutoEncoder(nn.Module):
             raise Exception("Process already started.")
         self.share_memory()
         self.losses = []
-        train = VariationalAutoEncoder._get_training_test_method()
+        train = VariationalAutoEncoder._get_training_test_method(self.cuda)
         self.proc = mp.Process(target=train, args=(self, self.train_loader,
                                                    self.test_loader,
                                                    self.counter_epoch,
@@ -106,7 +110,7 @@ class VariationalAutoEncoder(nn.Module):
             raise Exception("Process is still active.")
         #self.share_memory()
         self.stop_signal.set_signal(False)
-        train = VariationalAutoEncoder._get_training_test_method()
+        train = VariationalAutoEncoder._get_training_test_method(self.cuda)
         self.proc = mp.Process(target=train, args=(self, self.train_loader,
                                                    self.test_loader,
                                                    self.counter_epoch,
@@ -173,7 +177,7 @@ class VariationalAutoEncoder(nn.Module):
         return train
 
     @staticmethod
-    def _get_training_test_method():
+    def _get_training_test_method(cuda):
         def train(model, train_loader, test_loader, counter_epoch,
                   counter_iterations, loss_queue, stop_signal):
             print("started", stop_signal.value)
@@ -187,6 +191,8 @@ class VariationalAutoEncoder(nn.Module):
                 for _, data in enumerate(train_loader):
                     # data = Variable(data.view(-1,784))
                     data = Variable(data)
+                    if(cuda):
+                        data = data.cuda()
                     train_op.zero_grad()
                     dec = model(data)
                     loss = model.loss(data, dec, model.mu, model.log_std)
@@ -199,6 +205,8 @@ class VariationalAutoEncoder(nn.Module):
                 for _, data in enumerate(test_loader):
                     # data = Variable(data.view(-1,784))
                     data = Variable(data)
+                    if(cuda):
+                        data = data.cuda()
                     dec = model(data)
                     loss = model.loss(data, dec, model.mu, model.log_std)
                     loss_test.append(loss.data[0])
