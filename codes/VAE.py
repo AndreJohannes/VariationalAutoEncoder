@@ -4,54 +4,28 @@ import torch.multiprocessing as mp
 import torch.nn as nn
 import torch.optim as optim
 from torch.autograd import Variable
-from torchvision import datasets, transforms
 from torch.multiprocessing import Queue
+from torchvision import datasets, transforms
 
 import codes.ConvolutionCoders.Decoder as ConvDecoder
 import codes.ConvolutionCoders.Encoder as ConvEncoder
 import codes.DefaultCoders.Decoder as Decoder
 import codes.DefaultCoders.Encoder as Encoder
-
-
-class Counter(object):
-    def __init__(self):
-        from torch.multiprocessing import Value
-        self.val = Value('i', 0)
-
-    def increment(self, n=1):
-        with self.val.get_lock():
-            self.val.value += n
-
-    def reset(self):
-        with self.val.get_lock():
-            self.val.value = 0
-
-    @property
-    def value(self):
-        return self.val.value
-
-class Signal(object):
-    def __init__(self):
-        from torch.multiprocessing import Value
-        self.val = Value('i', False)
-
-    def set_signal(self, boolean):
-        with self.val.get_lock():
-            self.val.value = boolean
-
-    @property
-    def value(self):
-        return bool(self.val.value)
-
+from codes.utility.multiprocessing import Counter, Signal
 
 class VariationalAutoEncoder(nn.Module):
     '''
-
+    Implementation of a Variational AutoEncoder in pytorch. Currently two
+    decoder/encoder units are supported. The first unit features a two layer
+    dense neural network and the second a deep convolutional net.
+    The number of laternt units can be specified and is usually around 4-12 units.
+    The implmentation supports cuda. If cuda is not used the multiprocessing
+    framework is/can be used to send the computation to the background, so the
+    jupyter notebook it runs in will not be blocked.
     '''
-
-    def __init__(self, n_latent_units, drop_ratio, convolutional=False, cuda = False):
+    def __init__(self, n_latent_units, drop_ratio, convolutional=False):
         '''
-
+        Constructor
         :param n_latent_units:
         :param drop_ratio:
         '''
@@ -62,25 +36,33 @@ class VariationalAutoEncoder(nn.Module):
             else ConvDecoder.Decoder(n_latent_units, drop_ratio)
         self.proc = None
 
-        self.has_cuda = cuda
-        if cuda:
-            self.cuda()
-
         self.counter_epoch = Counter()
         self.counter_interation = Counter()
         self.loss_queue = Queue()
         self.stop_signal = Signal()
         self.losses = []
-        #self.train_loader, self.test_loader = VariationalAutoEncoder._get_train_loader()
-        # self.img_loss_func = nn.MSELoss()
 
     def forward(self, x):
+        '''
+        The forward method, calles the encoder and decoder
+        :param x:
+        :return:
+        '''
         z, mu, log_std = self.encoder.forward(x)
         self.mu = mu
         self.log_std = log_std
         return self.decoder.forward(z)
 
     def loss(self, _in, _out, mu, log_std):
+        '''
+        The loss function, the loss is calculated as the reconstruction error and
+        the error given by the deviation of latent variable from the normal distirbution
+        :param _in:
+        :param _out:
+        :param mu:
+        :param log_std:
+        :return:
+        '''
         # img_loss = self.img_loss_func(_in, _out)
         # img_loss = F.mse_loss(_in, _out)
         img_loss = _in.sub(_out).pow(2).sum()
@@ -89,12 +71,19 @@ class VariationalAutoEncoder(nn.Module):
         latent_loss = -0.5 * torch.sum(1.0 + 2.0 * log_std - mean_sq - torch.exp(2.0 * log_std))
         return img_loss + latent_loss
 
-    def start(self):
+    def start(self, train = None):
+        '''
+        This runs the training in the background. Currently only works with the cpu version
+        (cuda not supported atm)
+        :param train:
+        :return:
+        '''
         if self.proc is not None:
             raise Exception("Process already started.")
         self.share_memory()
         self.losses = []
-        train = VariationalAutoEncoder._get_training_test_method(self.has_cuda)
+        if train is None:
+            train = VariationalAutoEncoder._get_training_test_method()
         self.proc = mp.Process(target=train, args=(self, self.train_loader,
                                                    self.test_loader,
                                                    self.counter_epoch,
@@ -103,14 +92,20 @@ class VariationalAutoEncoder(nn.Module):
                                                    self.stop_signal))
         self.proc.start()
 
-    def restart(self):
+    def restart(self, train = None):
+        '''
+        Running in the background can be stopped. This method should be used if
+        the computation should be resumed. As with start(), does currently not work with cuda.
+        :param train:
+        :return:
+        '''
         if self.proc is None:
             raise Exception("Process has not been started before.")
         if self.proc.is_alive():
             raise Exception("Process is still active.")
-        #self.share_memory()
         self.stop_signal.set_signal(False)
-        train = VariationalAutoEncoder._get_training_test_method(self.has_cuda)
+        if train is None:
+            train = VariationalAutoEncoder._get_training_test_method()
         self.proc = mp.Process(target=train, args=(self, self.train_loader,
                                                    self.test_loader,
                                                    self.counter_epoch,
@@ -120,6 +115,10 @@ class VariationalAutoEncoder(nn.Module):
         self.proc.start()
 
     def stop(self):
+        '''
+        This functions sends a stop signal to the background process.
+        :return:
+        '''
         if self.proc is None:
             raise Exception("Process has been started.")
         if not self.proc.is_alive():
@@ -129,6 +128,10 @@ class VariationalAutoEncoder(nn.Module):
         self.stop_signal.set_signal(False)
 
     def get_progress(self):
+        '''
+        Functions gets the progress of the computation running in the background. 
+        :return:
+        '''
         while self.loss_queue.qsize() > 0:
             self.losses.append(self.loss_queue.get())
         return self.losses
@@ -137,47 +140,13 @@ class VariationalAutoEncoder(nn.Module):
         self.train_loader = train_loader
         self.test_loader = test_loader
 
-    @staticmethod
-    def _get_training_method():
-        def train(model, train_loader, counter_epoch,
-                  counter_iterations, loss_queue, stop_signal):
-            print("start", stop_signal.value)
-            train_op = optim.Adam(model.parameters(), lr=0.0005)
-            while not stop_signal.value:
-                loss_ = []
-                n = []
-                print("1")
-                for _, (data, target) in enumerate(train_loader):
-                    # data = Variable(data.view(-1,784))
-                    print("2")
-                    data = Variable(data)
-                    print("3")
-                    train_op.zero_grad()
-                    dec = model(data)
-                    print("4")
-                    loss = model.loss(data, dec, model.mu, model.log_std)
-                    print("5")
-                    loss_.append(loss.data[0])
-                    print("6")
-                    n.append(len(data))
-                    print("7")
-                    loss.backward()
-                    print("8")
-                    train_op.step()
-                    counter_iterations.increment()
-                    print("9")
-                counter_epoch.increment()
-                print("10")
-
-                epoch = counter_epoch.value
-                loss_mean = numpy.sum(loss_) / numpy.sum(n)
-                loss_queue.put((epoch, loss_mean))
-                print("{}: ".format(epoch), loss_mean)
-
-        return train
+    def cuda(self):
+        super(VariationalAutoEncoder, self).cuda()
+        self.decoder.cuda()
+        self.encoder.cuda()
 
     @staticmethod
-    def _get_training_test_method(cuda):
+    def _get_training_test_method():
         def train(model, train_loader, test_loader, counter_epoch,
                   counter_iterations, loss_queue, stop_signal):
             print("started", stop_signal.value)
@@ -187,12 +156,9 @@ class VariationalAutoEncoder(nn.Module):
                 loss_test = []
                 n_train = []
                 n_test = []
-                print("1")
                 for _, data in enumerate(train_loader):
                     # data = Variable(data.view(-1,784))
                     data = Variable(data)
-                    if(cuda):
-                        data = data.cuda()
                     train_op.zero_grad()
                     dec = model(data)
                     loss = model.loss(data, dec, model.mu, model.log_std)
@@ -201,18 +167,15 @@ class VariationalAutoEncoder(nn.Module):
                     loss.backward()
                     train_op.step()
                     counter_iterations.increment()
-                print("2")
+
                 for _, data in enumerate(test_loader):
                     # data = Variable(data.view(-1,784))
                     data = Variable(data)
-                    if(cuda):
-                        data = data.cuda()
                     dec = model(data)
                     loss = model.loss(data, dec, model.mu, model.log_std)
                     loss_test.append(loss.data[0])
                     n_test.append(len(data))
 
-                print("3")
                 counter_epoch.increment()
 
                 epoch = counter_epoch.value

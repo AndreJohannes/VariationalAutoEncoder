@@ -7,9 +7,9 @@ class Decoder(nn.Module):
 
     def __init__(self, n_latent_units, drop_ratio):
         '''
-
-        :param n_latent_units:
-        :param drop_ratio:
+        Constructor
+        :param n_latent_units: number of latent units
+        :param drop_ratio: not used
         '''
         super(Decoder, self).__init__()
         self.linear1 = torch.nn.Linear(n_latent_units, 100)
@@ -17,9 +17,9 @@ class Decoder(nn.Module):
 
     def forward(self, x):
         '''
-
-        :param x:
-        :return:
+        the forward method consists of a simple two layered net
+        :param x: the input variable (latent variable)
+        :return: the output as 28x28 image
         '''
         x = F.relu(self.linear1(x))
         return F.relu(self.linear2(x)).view(-1, 1, 28, 28)

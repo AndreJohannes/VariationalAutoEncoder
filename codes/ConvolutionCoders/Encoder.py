@@ -9,7 +9,11 @@ class Encoder(nn.Module):
     Convolution based encoder
     '''
     def __init__(self, n_latent_units, drop_ratio):
-
+        '''
+        Constructor
+        :param n_latent_units: the number of latent variables, good default value might be 8
+        :param drop_ratio: the drop ratio for the drop out.
+        '''
         super(Encoder, self).__init__()
         self.conv1 = nn.Conv2d(1, 64, 4, stride=2, padding = 1)
         self.conv1_drop = nn.Dropout2d(p = drop_ratio)
@@ -20,18 +24,48 @@ class Encoder(nn.Module):
         self.num_flat_features = 64 * 8 * 8
         self.linear1 = nn.Linear(self.num_flat_features, n_latent_units)
         self.linear2 = nn.Linear(self.num_flat_features, n_latent_units)
+        self.get_random_variable = self._get_random_variable
 
     def forward(self, x):
-        #y = nn.Linear(28*28, 8)(x.view(-1, 28*28))
-         #print(y.shape)
+        '''
+        The forward function
+        :param x: the input vector (expects 28x28 matrix)
+        :return: the output vector
+        '''
         x = F.leaky_relu(self.conv1_drop(self.conv1(x)))
         x = F.leaky_relu(self.conv2_drop(self.conv2(x)))
         x = F.leaky_relu(self.conv3_drop(self.conv3(x)))
         x = x.view(-1, self.num_flat_features)
         mu = self.linear1(x)
         logstd = 0.5*self.linear2(x)
-        eps = torch.from_numpy(numpy.random.normal(0, 1, size=logstd.size())).float()
-        eps = Variable(eps, requires_grad = False)
-
+        eps = self.get_random_variable(logstd.size()) #Function called depends on cuda or cpu version
         return eps.mul(torch.exp(logstd)).add_(mu), mu, logstd
 
+    def cuda(self):
+        '''
+        This function is needed because we have to make sure
+        that the variable created in the forward method is cuda compliant
+        :return:
+        '''
+        super(Encoder, self).cuda()
+        self.get_random_variable = self._get_random_variable_cuda
+
+    def _get_random_variable(self, size):
+        '''
+        Function generates a random variable with mean 0 and variance 1
+        :param size: the dimension of the variable
+        :return: the variable / sample
+        '''
+        eps = torch.from_numpy(numpy.random.normal(0, 1, size=size)).float()
+        eps = Variable(eps, requires_grad=False)
+        return eps
+
+    def _get_random_variable_cuda(self, logstd):
+        '''
+        Function generates a random variable for the gpu with mean 0 and variance 1
+        :param size: the dimension of the variable
+        :return: the variable / sample
+        '''
+        eps = torch.from_numpy(numpy.random.normal(0, 1, size=logstd.size())).float()
+        eps = Variable(eps, requires_grad=False).cuda()
+        return eps

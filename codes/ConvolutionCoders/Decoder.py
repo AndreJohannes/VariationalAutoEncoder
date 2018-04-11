@@ -9,9 +9,9 @@ class Decoder(nn.Module):
 
     def __init__(self, n_latent_units, drop_ratio):
         '''
-
-        :param n_latent_units:
-        :param drop_ratio:
+        Constructor
+        :param n_latent_units: the number of latent variables, good default value might be 8
+        :param drop_ratio: the drop ratio for the drop out (Not used)
         '''
         super(Decoder, self).__init__()
         self.linear1 = nn.Linear(n_latent_units, 24)
@@ -28,9 +28,9 @@ class Decoder(nn.Module):
 
     def forward(self, x):
         '''
-
-        :param x:
-        :return:
+        The forward function.
+        :param x: the input vector (expects vector with dimension as specified by n_latent_units)
+        :return: the output vector
         '''
         x = F.leaky_relu(self.linear1(x))
         x = F.leaky_relu(self.linear2(x))
