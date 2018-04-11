@@ -129,7 +129,7 @@ class VariationalAutoEncoder(nn.Module):
 
     def get_progress(self):
         '''
-        Functions gets the progress of the computation running in the background. 
+        Functions gets the progress of the computation running in the background.
         :return:
         '''
         while self.loss_queue.qsize() > 0:

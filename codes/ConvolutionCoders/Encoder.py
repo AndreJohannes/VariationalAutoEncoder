@@ -60,12 +60,12 @@ class Encoder(nn.Module):
         eps = Variable(eps, requires_grad=False)
         return eps
 
-    def _get_random_variable_cuda(self, logstd):
+    def _get_random_variable_cuda(self, size):
         '''
         Function generates a random variable for the gpu with mean 0 and variance 1
         :param size: the dimension of the variable
         :return: the variable / sample
         '''
-        eps = torch.from_numpy(numpy.random.normal(0, 1, size=logstd.size())).float()
+        eps = torch.from_numpy(numpy.random.normal(0, 1, size=size)).float()
         eps = Variable(eps, requires_grad=False).cuda()
         return eps
