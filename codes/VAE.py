@@ -11,7 +11,8 @@ import codes.ConvolutionCoders.Decoder as ConvDecoder
 import codes.ConvolutionCoders.Encoder as ConvEncoder
 import codes.DefaultCoders.Decoder as Decoder
 import codes.DefaultCoders.Encoder as Encoder
-from codes.utility.multiprocessing import Counter, Signal
+from codes.utility.Multiprocessing import Counter, Signal
+from codes.utility.DataLoader import DataIterator
 
 class VariationalAutoEncoder(nn.Module):
     '''
@@ -187,7 +188,7 @@ class VariationalAutoEncoder(nn.Module):
         return train
 
     @staticmethod
-    def _get_train_loader():
+    def get_MINST_train_loader():
         batch_size = 32
         train_loader = torch.utils.data.DataLoader(
             datasets.MNIST('../data', train=True, download=False,
@@ -202,4 +203,4 @@ class VariationalAutoEncoder(nn.Module):
             ])),
             batch_size=batch_size)
 
-        return train_loader, test_loader
+        return DataIterator(train_loader), DataIterator(test_loader)
