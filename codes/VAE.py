@@ -188,17 +188,33 @@ class VariationalAutoEncoder(nn.Module):
         return train
 
     @staticmethod
-    def get_MINST_train_loader():
-        batch_size = 32
+    def get_MNIST_train_loader(batch_size = 32):
         train_loader = torch.utils.data.DataLoader(
-            datasets.MNIST('../data', train=True, download=False,
+            datasets.MNIST('./data/MNIST', train=True, download=True,
                            transform=transforms.Compose([
                                transforms.ToTensor()
                            ])),
             batch_size=batch_size)
 
         test_loader = torch.utils.data.DataLoader(
-            datasets.MNIST('../data', train=False, transform=transforms.Compose([
+            datasets.MNIST('./data/MNIST', train=False, transform=transforms.Compose([
+                transforms.ToTensor()
+            ])),
+            batch_size=batch_size)
+
+        return DataIterator(train_loader), DataIterator(test_loader)
+
+    @staticmethod
+    def get_FashionMNIST_train_loader(batch_size = 32):
+        train_loader = torch.utils.data.DataLoader(
+            datasets.FashionMNIST('./data/FMNIST', train=True, download=True,
+                           transform=transforms.Compose([
+                               transforms.ToTensor()
+                           ])),
+            batch_size=batch_size)
+
+        test_loader = torch.utils.data.DataLoader(
+            datasets.FashionMNIST('./data/FMNIST', train=False, transform=transforms.Compose([
                 transforms.ToTensor()
             ])),
             batch_size=batch_size)
