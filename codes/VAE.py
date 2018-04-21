@@ -70,7 +70,7 @@ class VariationalAutoEncoder(nn.Module):
         mean_sq = mu * mu
         # -0.5 * tf.reduce_sum(1.0 + 2.0 * logsd - tf.square(mn) - tf.exp(2.0 * logsd), 1)
         latent_loss = -0.5 * torch.sum(1.0 + 2.0 * log_std - mean_sq - torch.exp(2.0 * log_std))
-        return img_loss + latent_loss
+        return img_loss + latent_loss, img_loss, latent_loss
 
     def start(self, train = None):
         '''
@@ -162,7 +162,7 @@ class VariationalAutoEncoder(nn.Module):
                     data = Variable(data)
                     train_op.zero_grad()
                     dec = model(data)
-                    loss = model.loss(data, dec, model.mu, model.log_std)
+                    loss, _, _ = model.loss(data, dec, model.mu, model.log_std)
                     loss_train.append(loss.data[0])
                     n_train.append(len(data))
                     loss.backward()
@@ -173,7 +173,7 @@ class VariationalAutoEncoder(nn.Module):
                     # data = Variable(data.view(-1,784))
                     data = Variable(data)
                     dec = model(data)
-                    loss = model.loss(data, dec, model.mu, model.log_std)
+                    loss, _, _ = model.loss(data, dec, model.mu, model.log_std)
                     loss_test.append(loss.data[0])
                     n_test.append(len(data))
 
