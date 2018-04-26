@@ -15,17 +15,17 @@ class Decoder(nn.Module):
         '''
         super(Decoder, self).__init__()
         self.linear1 = nn.Linear(n_latent_units, 60)
-        self.linear2 = nn.Linear(60, 60)
+        self.linear2 = nn.Linear(60, 60*64)
 
-        self.convt1 = nn.ConvTranspose2d(1, 64, 4, stride=2, padding=2)
+        self.convt1 = nn.ConvTranspose2d(64, 256, 4, stride=2, padding=2)
         self.convt1_drop = nn.Dropout2d(p=drop_ratio)
-        self.convt2 = nn.ConvTranspose2d(64, 128, 4, stride=2, padding=2)
+        self.convt2 = nn.ConvTranspose2d(256, 128, 4, stride=2, padding=2)
         self.convt2_drop = nn.Dropout2d(p=drop_ratio)
-        self.convt3 = nn.ConvTranspose2d(128, 256, 4, stride=2, padding=2)
-        self.convt4 = nn.ConvTranspose2d(256, 1, 4, stride=2, padding=(2, 3))
+        self.convt3 = nn.ConvTranspose2d(128, 64, 4, stride=2, padding=2)
+        self.convt4 = nn.ConvTranspose2d(64, 1, 4, stride=2, padding=(2, 3))
 
-        self.num_flat_features = 14 * 14 * 64
-        self.linear3 = nn.Linear(self.num_flat_features, 28 * 28)
+        #self.num_flat_features = 14 * 14 * 64
+        #self.linear3 = nn.Linear(self.num_flat_features, 28 * 28)
 
     def forward(self, x):
         '''
@@ -35,7 +35,7 @@ class Decoder(nn.Module):
         '''
         x = F.leaky_relu(self.linear1(x))
         x = F.leaky_relu(self.linear2(x))
-        x = x.view(-1, 1, 10, 6)
+        x = x.view(-1, 64, 10, 6)
         x = F.relu(self.convt1_drop(self.convt1(x)))
         x = F.relu(self.convt2_drop(self.convt2(x)))
         x = F.relu((self.convt3(x)))
