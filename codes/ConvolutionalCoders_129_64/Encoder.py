@@ -8,6 +8,7 @@ class Encoder(nn.Module):
     '''
     Convolution based encoder
     '''
+
     def __init__(self, n_latent_units, drop_ratio):
         '''
         Constructor
@@ -15,16 +16,18 @@ class Encoder(nn.Module):
         :param drop_ratio: the drop ratio for the drop out.
         '''
         super(Encoder, self).__init__()
-        self.conv1 = nn.Conv1d(1, 128, 256, stride=128, padding = 0)
-        self.conv1_drop = nn.Dropout(p = drop_ratio)
-        self.conv2 = nn.Conv2d(1, 64, 4, stride=1, padding = 0)
-        self.pool =  nn.MaxPool2d(2,2)
-        self.conv2_drop = nn.Dropout(p = drop_ratio)
-        self.conv3 = nn.Conv2d(64, 64, 4, stride=1, padding = 0)
-        self.conv3_drop = nn.Dropout(p = drop_ratio)
-        self.conv4 = nn.Conv2d(64, 64, 4, stride=1, padding = 0)
-        self.conv4_drop = nn.Dropout(p = drop_ratio)
-        self.num_flat_features = 4160
+
+        self.conv1 = nn.Conv2d(1, 64, 4, stride=1, padding=2)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.conv1_drop = nn.Dropout(p=drop_ratio)
+        self.conv2 = nn.Conv2d(64, 64, 4, stride=1, padding=2)
+        self.conv2_drop = nn.Dropout(p=drop_ratio)
+        self.conv3 = nn.Conv2d(64, 64, 4, stride=1, padding=2)
+        self.conv3_drop = nn.Dropout(p=drop_ratio)
+        self.conv4 = nn.Conv2d(64, 1, 4, stride=1, padding=2)
+        self.conv4_drop = nn.Dropout(p=drop_ratio)
+
+        self.num_flat_features = 1 * 18 * 9
         self.linear1 = nn.Linear(self.num_flat_features, n_latent_units)
         self.linear2 = nn.Linear(self.num_flat_features, n_latent_units)
         self.get_random_variable = self._get_random_variable
@@ -35,16 +38,17 @@ class Encoder(nn.Module):
         :param x: the input vector (expects 28x28 matrix)
         :return: the output vector
         '''
-        x = x / 2. + 0.5
         x = F.leaky_relu(self.conv1_drop(self.conv1(x)))
-        x= x.view(-1, 1 , 128, 64)
-        x = self.pool(F.leaky_relu(self.conv2_drop(self.conv2(x))))
-        x = self.pool(F.leaky_relu(self.conv3_drop(self.conv3(x))))
-        x = self.pool(F.leaky_relu(self.conv4_drop(self.conv4(x))))
+        x = self.pool(x)
+        x = F.leaky_relu(self.conv2_drop(self.conv2(x)))
+        x = self.pool(x)
+        x = F.leaky_relu(self.conv3_drop(self.conv3(x)))
+        x = self.pool(x)
+        x = F.leaky_relu(self.conv4_drop(self.conv4(x)))
         x = x.view(-1, self.num_flat_features)
         mu = self.linear1(x)
-        logstd = 0.5*self.linear2(x)
-        eps = self.get_random_variable(logstd.size()) #Function called depends on cuda or cpu version
+        logstd = 0.5 * self.linear2(x)
+        eps = self.get_random_variable(logstd.size())  # Function called depends on cuda or cpu version
         return eps.mul(torch.exp(logstd)).add_(mu), mu, logstd
 
     def cuda(self):
