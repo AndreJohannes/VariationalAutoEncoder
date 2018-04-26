@@ -20,11 +20,11 @@ class Encoder(nn.Module):
         self.conv1 = nn.Conv2d(1, 64, 4, stride=1, padding=2)
         self.pool = nn.MaxPool2d(2, 2)
         self.conv1_drop = nn.Dropout(p=drop_ratio)
-        self.conv2 = nn.Conv2d(64, 64, 4, stride=1, padding=2)
+        self.conv2 = nn.Conv2d(64, 128, 4, stride=1, padding=2)
         self.conv2_drop = nn.Dropout(p=drop_ratio)
-        self.conv3 = nn.Conv2d(64, 64, 4, stride=1, padding=2)
+        self.conv3 = nn.Conv2d(128, 256, 4, stride=1, padding=2)
         self.conv3_drop = nn.Dropout(p=drop_ratio)
-        self.conv4 = nn.Conv2d(64, 1, 4, stride=1, padding=2)
+        self.conv4 = nn.Conv2d(256, 1, 4, stride=1, padding=2)
         self.conv4_drop = nn.Dropout(p=drop_ratio)
 
         self.num_flat_features = 1 * 18 * 9
