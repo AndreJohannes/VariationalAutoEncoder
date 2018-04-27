@@ -7,7 +7,7 @@ from torch.autograd import Variable
 from torch.multiprocessing import Queue
 from torchvision import datasets, transforms
 
-import codes.ConvolutionCoders.Decoder as ConvDecoder
+import codes.ConvolutionCoders.Decoder_old as ConvDecoder
 import codes.ConvolutionCoders.Encoder as ConvEncoder
 import codes.DefaultCoders.Decoder as Decoder
 import codes.DefaultCoders.Encoder as Encoder
@@ -66,7 +66,7 @@ class VariationalAutoEncoder(nn.Module):
         '''
         # img_loss = self.img_loss_func(_in, _out)
         # img_loss = F.mse_loss(_in, _out)
-        img_loss = _in.sub(_out).pow(2).sum()
+        img_loss =  _in.sub(_out).pow(2).sum()
         mean_sq = mu * mu
         # -0.5 * tf.reduce_sum(1.0 + 2.0 * logsd - tf.square(mn) - tf.exp(2.0 * logsd), 1)
         latent_loss = -0.5 * torch.sum(1.0 + 2.0 * log_std - mean_sq - torch.exp(2.0 * log_std))
