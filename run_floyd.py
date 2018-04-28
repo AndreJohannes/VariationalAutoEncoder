@@ -11,7 +11,6 @@ import logging
 # os.remove('/output/runtime.log')
 logging.basicConfig(filename='/output/runtime.log', level=logging.DEBUG, format='%(asctime)s - %(message)s')
 
-
 class VAE_Wrapper:
     def __init__(self, vae, training_batches):
         self.vae = vae
@@ -67,27 +66,28 @@ def spec(_in):
     return v / torch.max(v)
 
 
-for i in range(10):
-    train_loader.append(torch.stack([spec(torch.FloatTensor(get_random_chunk())).unsqueeze(0) for i in range(128)]))
+for i in range(1):
+    train_loader.append(torch.stack([spec(torch.FloatTensor(get_random_chunk())).unsqueeze(0) for i in range(10)]))
 logging.info("training set finished, {} batches of size {}".format(len(train_loader), train_loader[0].shape[0]))
 
 #######
 # Make the VAE
 #######
 vae = VariationalAutoEncoder(18, 0)
-vae.encoder = Encoder(48, 0)
-vae.decoder = Decoder(48, 0)
-spec = Spectrogram(256)
+vae.encoder = Encoder(48, 0.2)
+vae.decoder = Decoder(48, 0.2)
+#spec = Spectrogram(256)
 vae.train_loader = train_loader
 
 wrapper = VAE_Wrapper(vae,
                       train_loader)
 
-for i in range(10):
+for i in range(1000):
     loss = wrapper.train_batch()
     if i % 1 == 0:
         logging.info("Epoch {}, loss {}".format(i, loss))
         print("Epoch {}, loss {}".format(i, loss))
+        print('{{"metric": "loss", "value": {} }}'.format(loss))
         # if i%1000==0:
         #    torch.save(vae.state_dict(), 'checkpoint_{}.pt'.format(i))
         #    logging.info("saved state")

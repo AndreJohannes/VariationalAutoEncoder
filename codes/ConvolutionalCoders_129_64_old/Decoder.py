@@ -15,12 +15,12 @@ class Decoder(nn.Module):
         '''
         super(Decoder, self).__init__()
         self.linear1 = nn.Linear(n_latent_units, 140)
-        self.linear2 = nn.Linear(140, 64*8*8)
+        self.linear2 = nn.Linear(140, 8*33*17)
 
-        self.conv1 = nn.Conv2d(64, 64, 5, stride=1, padding=2)
+        self.conv1 = nn.Conv2d(8, 64, 5, stride=1, padding=2)
         self.conv1_drop = nn.Dropout2d(p=drop_ratio)
         self.conv2 = nn.Conv2d(64, 64, 5, stride=1, padding=2)
-        self.bn2 = nn.BatchNorm2d(64)
+        self.bn2 = nn.BatchNordm2d(64)
         self.up2 = nn.UpsamplingBilinear2d(size=(16, 16))
         self.conv2_drop = nn.Dropout2d(p=drop_ratio)
         self.conv3 = nn.Conv2d(64, 32, 5, stride=1, padding=2)

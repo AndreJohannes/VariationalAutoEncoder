@@ -151,7 +151,7 @@ class VariationalAutoEncoder(nn.Module):
         def train(model, train_loader, test_loader, counter_epoch,
                   counter_iterations, loss_queue, stop_signal):
             print("started", stop_signal.value)
-            train_op = optim.Adam(model.parameters(), lr=0.0005)
+            train_op = optim.Adam(model.parameters(), lr=0.00005)
             while not stop_signal.value:
                 loss_train = []
                 loss_test = []
@@ -162,8 +162,8 @@ class VariationalAutoEncoder(nn.Module):
                     data = Variable(data)
                     train_op.zero_grad()
                     dec = model(data)
-                    loss, _, _ = model.loss(data, dec, model.mu, model.log_std)
-                    loss_train.append(loss.data[0])
+                    loss, loss_1, loss_2 = model.loss(data, dec, model.mu, model.log_std)
+                    loss_train.append((loss.data[0], loss_1.data[0], loss_2.data[0]))
                     n_train.append(len(data))
                     loss.backward()
                     train_op.step()
@@ -180,7 +180,7 @@ class VariationalAutoEncoder(nn.Module):
                 counter_epoch.increment()
 
                 epoch = counter_epoch.value
-                loss_train_mean = numpy.sum(loss_train) / numpy.sum(n_train)
+                loss_train_mean = numpy.sum(loss_train, axis = 0) / numpy.sum(n_train)
                 loss_test_mean = numpy.sum(loss_test) / numpy.sum(n_test)
                 loss_queue.put((epoch, loss_train_mean, loss_test_mean))
                 #print("{}: ".format(epoch),  loss_train_mean, loss_test_mean)
