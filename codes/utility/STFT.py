@@ -17,15 +17,13 @@ class STFT(torch.nn.Module):
         cutoff = int((self.filter_length / 2 + 1))
         fourier_basis = np.vstack([np.real(fourier_basis[:cutoff, :]),
                                    np.imag(fourier_basis[:cutoff, :])])
-        forward_basis = torch.FloatTensor(fourier_basis[:, None, :])
-        inverse_basis = torch.FloatTensor(np.linalg.pinv(scale * fourier_basis).T[:, None, :])
-
-        self.register_buffer('forward_basis', forward_basis.float())
-        self.register_buffer('inverse_basis', inverse_basis.float())
+        self.forward_basis = torch.FloatTensor(fourier_basis[:, None, :])
+      
+        #self.register_buffer('forward_basis', forward_basis.float())
 
     def transform(self, input_data):
         num_batches = input_data.size(0)
-        num_samples = input_data.size(1)
+        num_samples = input_data.size(-1)
 
         self.num_samples = num_samples
 
@@ -33,7 +31,7 @@ class STFT(torch.nn.Module):
         forward_transform = F.conv1d(input_data,
                                      Variable(self.forward_basis, requires_grad=False),
                                      stride = self.hop_length,
-                                     padding = self.filter_length)
+                                     padding = 0*self.filter_length)
         cutoff = int((self.filter_length / 2) + 1)
         real_part = forward_transform[:, :cutoff, :]
         imag_part = forward_transform[:, cutoff:, :]
@@ -42,6 +40,9 @@ class STFT(torch.nn.Module):
         return magnitude
 
     def forward(self, input_data):
-        self.magnitude, self.phase = self.transform(input_data)
-        reconstruction = self.inverse(self.magnitude, self.phase)
-        return reconstruction
+        self.magnitude = self.transform(input_data)
+        return self.magnitude
+      
+    def cuda(self):
+      self.forward_basis = self.forward_basis.cuda()
+      return self
