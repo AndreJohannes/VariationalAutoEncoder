@@ -37,7 +37,7 @@ class STFT(torch.nn.Module):
         imag_part = forward_transform[:, cutoff:, :]
 
         magnitude = torch.sqrt(real_part**2 + imag_part**2)
-        return magnitude
+        return magnitude.view(num_batches, 1, magnitude.shape[-2] , magnitude.shape[-1])
 
     def forward(self, input_data):
         self.magnitude = self.transform(input_data)
