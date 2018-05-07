@@ -7,10 +7,10 @@ from torch.autograd import Variable
 from torch.multiprocessing import Queue
 from torchvision import datasets, transforms
 
-import codes.ConvolutionCoders.Decoder_old as ConvDecoder
-import codes.ConvolutionCoders.Encoder as ConvEncoder
-import codes.DefaultCoders.Decoder as Decoder
-import codes.DefaultCoders.Encoder as Encoder
+import codes.legacy.ConvolutionCoder.Decoder_old as ConvDecoder
+import codes.Image.ConvolutionCoders.Encoder as ConvEncoder
+import codes.Image.DefaultCoders.Decoder as Decoder
+import codes.Image.DefaultCoders.Encoder as Encoder
 from codes.utility.Multiprocessing import Counter, Signal
 from codes.utility.DataLoader import DataIterator
 
@@ -151,7 +151,7 @@ class VariationalAutoEncoder(nn.Module):
         def train(model, train_loader, test_loader, counter_epoch,
                   counter_iterations, loss_queue, stop_signal):
             print("started", stop_signal.value)
-            train_op = optim.Adam(model.parameters(), lr=0.00005)
+            train_op = optim.Adam(model.parameters(), lr=0.0005)
             while not stop_signal.value:
                 loss_train = []
                 loss_test = []
@@ -162,7 +162,7 @@ class VariationalAutoEncoder(nn.Module):
                     data = Variable(data)
                     train_op.zero_grad()
                     dec = model(data)
-                    loss, loss_1, loss_2 = model.loss(data, dec, model.mu, model.log_std)
+                    loss, loss_1, loss_2 = model.loss(dec, data, model.mu, model.log_std)
                     loss_train.append((loss.data[0], loss_1.data[0], loss_2.data[0]))
                     n_train.append(len(data))
                     loss.backward()
@@ -173,22 +173,22 @@ class VariationalAutoEncoder(nn.Module):
                     # data = Variable(data.view(-1,784))
                     data = Variable(data)
                     dec = model(data)
-                    loss, _, _ = model.loss(data, dec, model.mu, model.log_std)
+                    loss, _, _ = model.loss(dec, data, model.mu, model.log_std)
                     loss_test.append(loss.data[0])
                     n_test.append(len(data))
 
                 counter_epoch.increment()
 
                 epoch = counter_epoch.value
-                loss_train_mean = numpy.sum(loss_train, axis = 0) / numpy.sum(n_train)
-                loss_test_mean = numpy.sum(loss_test) / numpy.sum(n_test)
+                loss_train_mean = numpy.mean(loss_train, axis = 0)# / numpy.sum(n_train)
+                loss_test_mean = numpy.mean(loss_test)# / numpy.sum(n_test)
                 loss_queue.put((epoch, loss_train_mean, loss_test_mean))
                 #print("{}: ".format(epoch),  loss_train_mean, loss_test_mean)
 
         return train
 
     @staticmethod
-    def get_MNIST_train_loader(batch_size = 32):
+    def get_MNIST_train_loader(batch_size = 32, keep_classes = False):
         train_loader = torch.utils.data.DataLoader(
             datasets.MNIST('./data/datasets/MNIST', train=True, download=True,
                            transform=transforms.Compose([
@@ -202,10 +202,12 @@ class VariationalAutoEncoder(nn.Module):
             ])),
             batch_size=batch_size)
 
+        if keep_classes:
+            return train_loader, test_loader    
         return DataIterator(train_loader), DataIterator(test_loader)
 
     @staticmethod
-    def get_FashionMNIST_train_loader(batch_size = 32):
+    def get_FashionMNIST_train_loader(batch_size = 32, keep_classes = False):
         train_loader = torch.utils.data.DataLoader(
             datasets.FashionMNIST('./data/datasets/FMNIST', train=True, download=True,
                            transform=transforms.Compose([
@@ -219,4 +221,6 @@ class VariationalAutoEncoder(nn.Module):
             ])),
             batch_size=batch_size)
 
+        if keep_classes:
+            return train_loader, test_loader
         return DataIterator(train_loader), DataIterator(test_loader)
